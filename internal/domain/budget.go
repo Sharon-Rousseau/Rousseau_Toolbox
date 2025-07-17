@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type Budget struct {
-	ID        int
+	ID        string
 	Name      string
 	CreatedAt time.Time
 }

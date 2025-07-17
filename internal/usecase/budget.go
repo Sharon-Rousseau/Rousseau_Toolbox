@@ -6,6 +6,7 @@ import "github.com/bootstrappedsoftware/rousseau_toolbox/internal/domain"
 type BudgetRepository interface {
 	Create(name string) error
 	List() ([]domain.Budget, error)
+	Delete(id string) error
 }
 
 type BudgetService struct {
@@ -22,4 +23,8 @@ func (s *BudgetService) CreateBudget(name string) error {
 
 func (s *BudgetService) ListBudgets() ([]domain.Budget, error) {
 	return s.repo.List()
+}
+
+func (s *BudgetService) DeleteBudget(id string) error {
+	return s.repo.Delete(id)
 }

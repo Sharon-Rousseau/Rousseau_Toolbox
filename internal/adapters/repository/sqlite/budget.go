@@ -2,8 +2,11 @@ package sqlite
 
 import (
 	"database/sql"
-	"github.com/bootstrappedsoftware/rousseau_toolbox/internal/domain"
+	"fmt"
+	"strconv"
 	"time"
+	
+	"github.com/bootstrappedsoftware/rousseau_toolbox/internal/domain"
 )
 
 // Repo implements the usecase.BudgetRepository interface using SQLite.
@@ -30,10 +33,35 @@ func (r *Repo) List() ([]domain.Budget, error) {
 	var budgets []domain.Budget
 	for rows.Next() {
 		var b domain.Budget
-		if err := rows.Scan(&b.ID, &b.Name, &b.CreatedAt); err != nil {
+		var id int
+		if err := rows.Scan(&id, &b.Name, &b.CreatedAt); err != nil {
 			return nil, err
 		}
+		b.ID = strconv.Itoa(id)
 		budgets = append(budgets, b)
 	}
 	return budgets, nil
+}
+
+func (r *Repo) Delete(id string) error {
+	intID, err := strconv.Atoi(id)
+	if err != nil {
+		return fmt.Errorf("invalid budget ID: %v", err)
+	}
+	
+	result, err := r.DB.Exec(`DELETE FROM budgets WHERE id = ?`, intID)
+	if err != nil {
+		return err
+	}
+	
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	
+	if rowsAffected == 0 {
+		return fmt.Errorf("budget with ID %s not found", id)
+	}
+	
+	return nil
 }
