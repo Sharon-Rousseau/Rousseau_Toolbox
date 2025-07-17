@@ -9,3 +9,10 @@
 - `migrations` - SQL migration files.
 - `internal/adapters/web/templates` - HTML templates for the web adapter.
 - Uses the upstream modernc.org/sqlite pure Go SQLite driver.
+
+## JavaScript
+
+- `javascript/domain` - JS domain models (`Budget`, `Expense`, `DebitOrder`).
+- `javascript/usecase` - JS business logic (`BudgetService`).
+- `javascript/adapters/api` - Express server with MongoDB repository.
+- `javascript/frontend` - React components including `BudgetingApp.jsx`.
