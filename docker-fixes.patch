@@ -1,0 +1,35 @@
+diff --git a/Dockerfile b/Dockerfile
+index fa878e1..ddce543 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -1,14 +1,15 @@
+ ARG GO_VERSION=1
+-FROM golang:${GO_VERSION}-bookworm as builder
++FROM golang:${GO_VERSION}-bookworm AS builder
+ 
+ WORKDIR /usr/src/app
+ COPY go.mod go.sum ./
+ RUN go mod download && go mod verify
+ COPY . .
+-RUN go build -v -o /run-app .
++RUN go build -v -o /run-app ./cmd/server
+ 
+ 
+ FROM debian:bookworm
+ 
+ COPY --from=builder /run-app /usr/local/bin/
++COPY --from=builder /usr/src/app/migrations /migrations
+ CMD ["run-app"]
+diff --git a/internal/adapters/web/server.go b/internal/adapters/web/server.go
+index c7986e0..cab1fb9 100644
+--- a/internal/adapters/web/server.go
++++ b/internal/adapters/web/server.go
+@@ -13,7 +13,7 @@ type Server struct {
+ }
+ 
+ func NewServer(svc *usecase.BudgetService) *Server {
+-	t := template.Must(template.ParseFS(templateFS, "dashboard.html"))
++	t := template.Must(template.ParseFS(templateFS, "templates/dashboard.html"))
+ 	return &Server{svc: svc, templates: t}
+ }
+ 

@@ -13,7 +13,7 @@ type Server struct {
 }
 
 func NewServer(svc *usecase.BudgetService) *Server {
-	t := template.Must(template.ParseFS(templateFS, "dashboard.html"))
+	t := template.Must(template.ParseFS(templateFS, "templates/dashboard.html"))
 	return &Server{svc: svc, templates: t}
 }
 
