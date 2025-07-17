@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	_ "github.com/glebarez/sqlite"
+	_ "modernc.org/sqlite"
 )
 
 func TestRunMigrations(t *testing.T) {
