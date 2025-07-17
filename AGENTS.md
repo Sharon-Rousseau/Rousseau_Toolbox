@@ -1,6 +1,9 @@
 **Always** maintain a codemap.md file
 **Always** follow hexaganoal architecture
 **Always** write tests
+**Always** use templ for templating
+**Always** use HTMX for dynamic interactions and DOM updates
+**Always** use HTMX Server-Sent Events (SSE) for real-time data streams
 
 ---
 description: 'Beast Mode'
@@ -210,3 +213,146 @@ You are a seasoned software engineer with 10+ years of experience building produ
 - Plan for capacity scaling and disaster recovery
 
 Remember: Ship working software that solves real problems while building systems that your team can maintain and evolve over time. Every line of code is a liability that needs to be justified by the business value it provides.
+
+---
+
+# Frontend Architecture & Technologies
+
+## Templating with templ.guide
+
+**templ** is our primary templating solution for building HTML user interfaces in Go. It provides type-safe, compiled templates that integrate seamlessly with Go's type system.
+
+### Key Benefits:
+- **Type Safety**: Compile-time checking of template variables and function calls
+- **Performance**: Templates are compiled to efficient Go code
+- **IDE Support**: Full Go tooling support with autocompletion and refactoring
+- **No Runtime Parsing**: Templates are compiled at build time, not runtime
+
+### Usage Guidelines:
+```go
+// Define components as templ functions
+templ Header(title string) {
+    <h1>{ title }</h1>
+}
+
+// Use components in server handlers
+func handler(w http.ResponseWriter, r *http.Request) {
+    component := Header("My App")
+    component.Render(r.Context(), w)
+}
+```
+
+### File Structure:
+- Place `.templ` files alongside your Go code
+- Run `templ generate` to create corresponding `_templ.go` files
+- Import and use templ components like regular Go functions
+
+## Dynamic Interactions with HTMX
+
+**HTMX** enables rich, interactive web applications without writing JavaScript. It extends HTML with attributes for AJAX requests, CSS transitions, and more.
+
+### Core HTMX Attributes:
+- `hx-get`, `hx-post`, `hx-put`, `hx-delete`: HTTP requests
+- `hx-target`: Specify where to place response content
+- `hx-swap`: Control how content is swapped (innerHTML, outerHTML, etc.)
+- `hx-trigger`: Define when requests are triggered (click, change, load, etc.)
+
+### Example Usage:
+```html
+<!-- Add item without page refresh -->
+<form hx-post="/add" hx-target="#items-list" hx-swap="innerHTML">
+    <input type="text" name="name" />
+    <button type="submit">Add</button>
+</form>
+
+<!-- Delete with confirmation -->
+<button hx-delete="/item/123" 
+        hx-confirm="Are you sure?" 
+        hx-target="#items-list">
+    Delete
+</button>
+```
+
+### Best Practices:
+- Use `hx-target` to specify exactly where content should be updated
+- Include `hx-swap` to control how content is replaced
+- Add `hx-confirm` for destructive actions
+- Use `hx-indicator` to show loading states
+
+## Real-Time Communication with HTMX SSE
+
+**Server-Sent Events (SSE)** with HTMX enable real-time data streaming from server to client for live updates.
+
+### When to Use SSE:
+- **Live dashboards**: Real-time metrics, charts, and status updates
+- **Chat applications**: New messages appearing instantly
+- **Progress tracking**: Build status, file uploads, long-running operations
+- **Live feeds**: News updates, social media streams, notifications
+- **Collaborative editing**: Real-time document changes
+
+### Implementation:
+```html
+<!-- Client-side: Listen for SSE events -->
+<div hx-ext="sse" 
+     sse-connect="/stream/notifications" 
+     sse-swap="notification">
+    <div id="notifications"></div>
+</div>
+```
+
+```go
+// Server-side: Stream events
+func streamHandler(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "text/event-stream")
+    w.Header().Set("Cache-Control", "no-cache")
+    w.Header().Set("Connection", "keep-alive")
+    
+    for {
+        data := getLatestData()
+        component := NotificationComponent(data)
+        
+        fmt.Fprintf(w, "event: notification\n")
+        fmt.Fprintf(w, "data: ")
+        component.Render(r.Context(), w)
+        fmt.Fprintf(w, "\n\n")
+        
+        w.(http.Flusher).Flush()
+        time.Sleep(time.Second)
+    }
+}
+```
+
+### SSE vs WebSockets:
+- **Use SSE when**: Server-to-client communication, simpler protocol, automatic reconnection
+- **Use WebSockets when**: Bidirectional communication, low latency requirements, complex protocols
+
+## Integration Patterns
+
+### templ + HTMX Workflow:
+1. **Define Components**: Create reusable templ components for UI elements
+2. **Server Handlers**: Return templ components from HTTP handlers
+3. **HTMX Requests**: Use HTMX attributes to trigger server requests
+4. **Dynamic Updates**: Server returns updated templ components for swapping
+
+### File Organization:
+```
+internal/
+├── adapters/
+│   └── web/
+│       ├── handlers.go      # HTTP handlers
+│       ├── dashboard.templ  # templ templates
+│       └── dashboard_templ.go # Generated templ code
+├── domain/
+│   └── models.go           # Domain models
+└── usecase/
+    └── services.go         # Business logic
+```
+
+### Development Workflow:
+1. Create/modify `.templ` files
+2. Run `templ generate` to update Go code
+3. Use templ components in HTTP handlers
+4. Add HTMX attributes for dynamic behavior
+5. Test interactions and SSE streams
+
+This architecture provides a modern, maintainable approach to web development while staying within the Go ecosystem and avoiding complex JavaScript frameworks.
