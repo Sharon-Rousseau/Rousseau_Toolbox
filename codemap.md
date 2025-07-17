@@ -8,3 +8,4 @@
 - `internal/database` - database setup and migrations.
 - `migrations` - SQL migration files.
 - `internal/adapters/web/templates` - HTML templates for the web adapter.
+- Uses the upstream modernc.org/sqlite pure Go SQLite driver.

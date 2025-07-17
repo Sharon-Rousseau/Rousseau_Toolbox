@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	_ "github.com/glebarez/sqlite"
+	_ "modernc.org/sqlite"
 
 	"github.com/bootstrappedsoftware/rousseau_toolbox/internal/adapters/repository/sqlite"
 	"github.com/bootstrappedsoftware/rousseau_toolbox/internal/adapters/web"
@@ -32,7 +32,7 @@ func main() {
 
 	repo := sqlite.NewRepo(db)
 	svc := usecase.NewBudgetService(repo)
-	server := http.NewServer(svc)
+	server := web.NewServer(svc)
 
 	addr := fmt.Sprintf(":%s", port)
 	log.Printf("server listening on %s", addr)
