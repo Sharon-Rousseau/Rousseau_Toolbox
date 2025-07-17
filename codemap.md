@@ -1,11 +1,128 @@
 # Code Map
 
-- `cmd/server` - entry point for the HTTP server.
-- `internal/domain` - domain entities.
-- `internal/usecase` - business logic use cases.
-- `internal/adapters/web` - web/http adapter using Go templates.
-- `internal/adapters/repository/sqlite` - sqlite repository implementation.
-- `internal/database` - database setup and migrations.
-- `migrations` - SQL migration files.
-- `internal/adapters/web/templates` - HTML templates for the web adapter.
-- Uses the upstream modernc.org/sqlite pure Go SQLite driver.
+This document provides a detailed overview of the Rousseau Toolbox project, its architecture, and key components. It is intended to be a guide for developers to understand the project structure and how different parts of the application interact.
+
+## Project Overview
+
+Rousseau Toolbox is a household management application, starting with a budgeting feature. It is built in Go and follows a Hexagonal Architecture, ensuring a clean separation of concerns between the core business logic and external interfaces.
+
+The application uses a modern web stack, including:
+
+- **Go**: For the backend logic.
+- **SQLite**: As the database, accessed via the `modernc.org/sqlite` driver.
+- **templ**: For type-safe HTML templating.
+- **HTMX**: For dynamic and interactive web interfaces without writing complex JavaScript.
+- **Tailwind CSS**: For styling the user interface.
+
+## Architectural Principles
+
+The project adheres to the principles of **Hexagonal Architecture** (also known as Ports and Adapters). This architecture promotes a clear separation between the application's core logic and the services it consumes or is consumed by.
+
+The main layers are:
+
+- **Domain Layer**: Contains the core business entities and rules.
+- **Application Layer (Usecase)**: Orchestrates the business logic and use cases.
+- **Adapter Layer**: Connects the application to the outside world (e.g., web server, database).
+
+This structure is reflected in the directory layout, which is designed to be modular and maintainable.
+
+## Directory Structure and Key Files
+
+### `cmd/server/main.go`
+
+- **Purpose**: The main entry point of the application.
+- **Responsibilities**:
+    - Initializes the database connection (`sql.DB`).
+    - Runs database migrations from the `/migrations` directory.
+    - Wires together the application components:
+        - Creates a `sqlite.Repo` (the database adapter).
+        - Creates a `usecase.BudgetService` (the application logic).
+        - Creates a `web.Server` (the web adapter).
+    - Starts the HTTP server and listens for requests.
+
+### `internal/domain`
+
+- **Purpose**: Defines the core business entities of the application. This layer is independent of any specific technology or framework.
+- **`budget.go`**:
+    - Defines the `Budget` struct, which is the central entity in the budgeting feature. It includes the budget's `ID`, `Name`, and `CreatedAt` timestamp.
+
+### `internal/usecase`
+
+- **Purpose**: Contains the application-specific business logic. It orchestrates the flow of data between the domain and the adapters.
+- **`budget.go`**:
+    - **`BudgetRepository` interface**: Defines the contract for the budget data persistence layer. This allows the use case to be independent of the specific database implementation.
+    - **`BudgetService`**: Implements the core business logic for managing budgets (creating, listing, deleting). It depends on the `BudgetRepository` interface, not a concrete implementation.
+
+### `internal/adapters`
+
+- **Purpose**: This package contains the implementation of the interfaces defined in the use case layer, as well as the code that adapts external requests to application calls.
+
+#### `repository/sqlite`
+
+- **Purpose**: Implements the `BudgetRepository` interface using a SQLite database.
+- **`budget.go`**:
+    - **`Repo` struct**: Holds the database connection (`*sql.DB`).
+    - Implements the `Create`, `List`, and `Delete` methods for budgets, executing the necessary SQL queries.
+- **`budget_test.go`**:
+    - Provides integration tests for the SQLite repository, ensuring that the SQL queries and data mapping work as expected. It uses an in-memory SQLite database for testing.
+
+#### `web`
+
+- **Purpose**: Handles the web-facing aspects of the application, including the HTTP server, routing, and rendering of the UI.
+- **`server.go`**:
+    - **`Server` struct**: Holds a reference to the `BudgetService`.
+    - **`routes()`**: Defines the application's URL routes (`/`, `/add`, `/budget/{id}`).
+    - **HTTP Handlers**:
+        - `handleIndex`: Fetches the list of budgets and renders the main dashboard.
+        - `handleAdd`: Handles the creation of a new budget via an HTMX POST request.
+        - `handleBudgetDelete`: Handles the deletion of a budget via an HTMX DELETE request.
+- **`dashboard.templ`**:
+    - **templ file**: Defines the HTML templates for the user interface using the `templ` language.
+    - **Components**:
+        - `Dashboard`: The main page layout.
+        - `AddBudgetForm`: The form for creating a new budget, with HTMX attributes for submission.
+        - `BudgetList`: The list of budgets, which is updated by HTMX.
+        - `BudgetItem`: A single budget item in the list, with a delete button that uses HTMX.
+- **`dashboard_templ.go`**:
+    - **Generated Go code**: This file is automatically generated by the `templ` CLI from `dashboard.templ`. It contains the Go functions that render the HTML templates. **This file should not be edited manually.**
+
+### `internal/database`
+
+- **Purpose**: Contains database-related utility functions.
+- **`migrate.go`**:
+    - **`RunMigrations` function**: Reads all `.sql` files from a given directory, sorts them alphabetically, and executes them against the database. This ensures that the database schema is always up-to-date.
+- **`migrate_test.go`**:
+    - Tests the migration runner to ensure it can correctly apply migrations.
+
+### `migrations`
+
+- **Purpose**: Stores the SQL migration files.
+- **`001_create_budgets.sql`**:
+    - The initial migration that creates the `budgets` table in the database.
+
+### `AGENTS.md`
+
+- **Purpose**: A critical document that outlines the development standards, architectural patterns, and workflow for the project. It provides detailed guidelines on:
+    - **Hexagonal Architecture**: The core architectural pattern.
+    - **Frontend Architecture**: The use of `templ` and `HTMX`.
+    - **Testing Strategy**: The test pyramid, coverage requirements, and how to write different types of tests.
+    - **Development Workflow**: The steps to follow when implementing new features.
+    - **Security and Performance**: Best practices to follow.
+
+### Configuration and Deployment
+
+- **`go.mod`, `go.sum`**: Manage the project's Go dependencies.
+- **`Dockerfile`**: Defines the Docker image for building and running the application.
+- **`fly.toml`**: Configuration file for deploying the application to [Fly.io](https://fly.io/).
+- **`.github/workflows/fly-deploy.yml`**: A GitHub Actions workflow for automatically deploying the application to Fly.io.
+
+## Data Flow Example: Creating a Budget
+
+1.  **User Interaction**: The user types a budget name into the form on the web page and clicks "Add Budget".
+2.  **HTMX Request**: The browser sends a `POST` request to the `/add` endpoint, triggered by the `hx-post` attribute on the form.
+3.  **Web Adapter (`server.go`)**: The `handleAdd` function receives the request, parses the form data, and calls the `CreateBudget` method on the `BudgetService`.
+4.  **Application Layer (`usecase/budget.go`)**: The `BudgetService` receives the request and calls the `Create` method on its `BudgetRepository`.
+5.  **Database Adapter (`repository/sqlite/budget.go`)**: The `sqlite.Repo` executes an `INSERT` statement to create the new budget in the database.
+6.  **Response**: The `handleAdd` handler then calls `ListBudgets` on the service to get the updated list of budgets.
+7.  **HTMX Response**: The server renders the `BudgetList` component (from `dashboard.templ`) with the new list of budgets and sends the resulting HTML fragment back to the browser.
+8.  **UI Update**: HTMX receives the HTML fragment and uses it to replace the content of the `#budgets-container` div, as specified by the `hx-target` and `hx-swap` attributes. The user sees the new budget appear in the list without a full page reload.
