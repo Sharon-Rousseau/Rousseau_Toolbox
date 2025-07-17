@@ -1,5 +1,4 @@
-ARG GO_VERSION=1.23
-FROM golang:${GO_VERSION}-bookworm AS builder
+FROM golang:1.23-bookworm AS builder
 
 WORKDIR /usr/src/app
 COPY go.mod go.sum ./
